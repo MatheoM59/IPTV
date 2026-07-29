@@ -1,5 +1,5 @@
-use serde::Deserialize;
 use serde::de::DeserializeOwned;
+use serde::Deserialize;
 /// Typage et structure
 #[derive(Debug, Deserialize)]
 pub struct ApiResponse {
@@ -20,30 +20,30 @@ pub struct Category {
 
 #[derive(Debug, Deserialize)]
 pub struct LiveContent {
-    pub num: u8,
+    pub num: u32,
     pub name: String,
     pub stream_type: String,
-    pub stream_id: u16,
-    pub steam_icon: String,
-    pub category_id: String,
+    pub stream_id: u32,
+    pub stream_icon: String,
+    pub category_id: Option<String>,
 }
 #[derive(Debug, Deserialize)]
 pub struct SeriesContent {
-    pub um: String,
+    pub num: u32,
     pub name: String,
-    pub series_id: u16,
+    pub series_id: u32,
     pub cover: String,
     pub plot: String,
     pub cast: String,
     pub director: String,
     pub genre: String,
-    pub releaseDate: String,
+    #[serde(rename = "releaseDate")]
+    pub release_date: String,
     pub last_modified: String,
     pub rating: String,
-    pub backdrop_path: Vec<String>,
     pub youtube_trailer: String,
     pub episode_run_time: String,
-    category_id: String,
+    pub category_id: Option<String>,
 }
 
 /// Api call
