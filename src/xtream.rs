@@ -45,6 +45,17 @@ pub struct SeriesContent {
     pub episode_run_time: String,
     pub category_id: Option<String>,
 }
+#[derive(Debug, Deserialize)]
+pub struct VodContent {
+    pub num: u32,
+    pub name: String,
+    pub stream_type: String,
+    pub stream_id: u32,
+    pub stream_icon: Option<String>,
+    pub rating_5based: f32,
+    pub container_extension: String,
+    pub category_id: Option<String>,
+}
 
 /// Api call
 pub fn api<T: DeserializeOwned>(
