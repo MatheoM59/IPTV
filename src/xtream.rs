@@ -1,5 +1,6 @@
-use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
+
 /// Typage et structure
 #[derive(Debug, Deserialize)]
 pub struct ApiResponse {
@@ -56,6 +57,11 @@ pub struct VodContent {
     pub container_extension: String,
     pub category_id: Option<String>,
 }
+pub enum StreamKind {
+    Live,
+    Movie,
+    Series,
+}
 
 /// Api call
 pub fn api<T: DeserializeOwned>(
@@ -63,20 +69,22 @@ pub fn api<T: DeserializeOwned>(
     username: &str,
     password: &str,
     action: Option<&str>,
-) -> T {
+) -> Result<T, String> {
     let url = build_api_url(host, username, password, action);
     let client = reqwest::blocking::Client::builder()
         .user_agent("VLC/3.0.20 LibVLC/3.0.20")
         .build()
-        .expect("User Agent error");
-    let resp = client.get(&url).send().expect("Send error");
+        .map_err(|e| format!("User Agent error {e}"))?;
+    let resp = client
+        .get(&url)
+        .send()
+        .map_err(|e| format!("Send error {e}"))?;
     let status = resp.status();
     if !status.is_success() {
-        panic!("Requête refusé (Status : {status})")
+        return Err(format!("Requête refusé (status : {status})"));
     }
-    let body = resp.text().expect("body text absent");
-    let parsed: T = serde_json::from_str(&body).expect("Parsing error");
-    parsed
+    let body = resp.text().map_err(|e| format!("Body text absent {e}"))?;
+    serde_json::from_str(&body).map_err(|e| format!("Parse error {e}"))
 }
 
 fn build_api_url(host: &str, username: &str, password: &str, action: Option<&str>) -> String {
@@ -86,4 +94,20 @@ fn build_api_url(host: &str, username: &str, password: &str, action: Option<&str
         url.push_str(&format!("&action={a}"));
     }
     url
+}
+
+fn build_stream_url(
+    host: &str,
+    username: &str,
+    password: &str,
+    kind: StreamKind,
+    stream_id: u32,
+    extension: &str,
+) -> String {
+    let segment = match kind {
+        StreamKind::Live => "live",
+        StreamKind::Movie => "movie",
+        StreamKind::Series => "series",
+    };
+    format!("{host}/{segment}/{username}/{password}/{stream_id}.{extension}")
 }
