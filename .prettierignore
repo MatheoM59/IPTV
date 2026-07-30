@@ -1,0 +1,7 @@
+node_modules
+dist
+
+# Le Rust est formate par rustfmt (cargo fmt), pas par Prettier.
+# On exclut tout src-tauri pour que Prettier ne reformate pas non plus
+# tauri.conf.json et les fichiers de capabilities generes par Tauri.
+src-tauri
