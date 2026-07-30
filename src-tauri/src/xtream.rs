@@ -1,25 +1,25 @@
-use serde::Deserialize;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 /// Typage et structure
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ApiResponse {
     pub user_info: UserInfo,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct UserInfo {
     pub auth: u8,
     pub status: String,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Category {
     pub category_id: String,
     pub category_name: String,
     pub parent_id: u8,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct LiveContent {
     pub num: u32,
     pub name: String,
@@ -28,7 +28,7 @@ pub struct LiveContent {
     pub stream_icon: String,
     pub category_id: Option<String>,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct SeriesContent {
     pub num: u32,
     pub name: String,
@@ -46,7 +46,7 @@ pub struct SeriesContent {
     pub episode_run_time: String,
     pub category_id: Option<String>,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct VodContent {
     pub num: u32,
     pub name: String,
