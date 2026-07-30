@@ -3,6 +3,7 @@ use std::env;
 
 use crate::xtream::ApiResponse;
 use crate::xtream::Category;
+use crate::xtream::StreamKind;
 fn main() {
     let host = "http://pl-ott.com";
     let username = env::var("XTREAM_USER").expect("Variable XTREAM_USER absente");
@@ -32,6 +33,15 @@ fn main() {
                 return;
             }
         };
+    let url_film =
+        xtream::build_stream_url(host, &username, &password, StreamKind::Movie, 412927, "mkv");
+    let url_live =
+        xtream::build_stream_url(host, &username, &password, StreamKind::Live, 502494, "ts");
+    let url_serie =
+        xtream::build_stream_url(host, &username, &password, StreamKind::Series, 1, "mkv");
     println!("Account {user_status} and connected");
-    println!("{cats:#?}")
+
+    println!("{cats:#?}");
+
+    println!("live  : {url_serie}");
 }

@@ -96,7 +96,7 @@ fn build_api_url(host: &str, username: &str, password: &str, action: Option<&str
     url
 }
 
-fn build_stream_url(
+pub fn build_stream_url(
     host: &str,
     username: &str,
     password: &str,
