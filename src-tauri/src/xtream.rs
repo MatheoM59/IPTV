@@ -1,5 +1,6 @@
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
 
 /// Typage et structure
 #[derive(Debug, Deserialize, Serialize)]
@@ -12,6 +13,18 @@ pub struct UserInfo {
     pub auth: u8,
     pub status: String,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Credentials {
+    pub host: String,
+    pub username: String,
+    pub password: String,
+}
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AppState {
+    pub credentials: Mutex<Option<Credentials>>,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Category {
     pub category_id: String,
