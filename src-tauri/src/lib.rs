@@ -40,7 +40,7 @@ fn get_categories(state: tauri::State<AppState>, catalog: String) -> Result<Vec<
     let creds = guard.as_ref().ok_or("Aucune connection active")?;
     let action = match catalog.as_str() {
         "live" => "get_live_categories",
-        "vod" => "get_movie_categories",
+        "vod" => "get_vod_categories",
         "serie" => "get_series_categories",
         other => return Err(format!("Catalogue inconnue : {other}")),
     };
