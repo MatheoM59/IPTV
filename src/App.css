@@ -1,1 +1,91 @@
 @import "tailwindcss";
+
+/* ============================================================
+   SYSTEME DE DESIGN — ambiance salle de cinema
+   Principe : des noirs CHAUDS (teintes de rouge dans les gris),
+   un rouge velours desature en accent, et tres peu de contraste
+   sauf la ou il faut vraiment regarder.
+   Les jetons sont nommes par ROLE, jamais par apparence.
+   ============================================================ */
+
+@theme {
+  /* --- Fonds, du plus profond au plus eleve ------------------ */
+  /* base     : le fond de l'app, presque noir mais chaud
+     surface  : cartes, header, sidebar
+     elevated : survol d'une carte, menu ouvert, zone active */
+  --color-base: #0c0909;
+  --color-surface: #151011;
+  --color-elevated: #1e1718;
+
+  /* --- Traits ------------------------------------------------ */
+  /* line   : separateurs discrets, bordures de cartes
+     line-strong : bordure d'un element focalise ou selectionne */
+  --color-line: #2a2122;
+  --color-line-strong: #3d3132;
+
+  /* --- Textes ------------------------------------------------ */
+  /* ink    : titres et texte principal (blanc casse chaud)
+     muted  : texte secondaire, libelles, metadonnees
+     subtle : texte a peine visible, indices, etats desactives */
+  --color-ink: #f0e9e7;
+  --color-muted: #a2918f;
+  --color-subtle: #6b5c5c;
+
+  /* --- Accent : rouge velours -------------------------------- */
+  /* accent       : boutons principaux, categorie active, focus
+     accent-hover : survol
+     accent-soft  : fonds teintes et halos de focus (translucide) */
+  --color-accent: #a72c33;
+  --color-accent-hover: #c23940;
+  --color-accent-soft: #a72c331f;
+
+  /* --- Etats ------------------------------------------------- */
+  /* danger se distingue de l'accent par sa saturation :
+     l'accent est velours et calme, danger est vif et alerte */
+  --color-danger: #e05a4a;
+  --color-danger-soft: #e05a4a1a;
+  --color-success: #6f9c6a;
+
+  /* --- Arrondis ---------------------------------------------- */
+  --radius-card: 0.625rem;
+  --radius-panel: 1rem;
+
+  /* --- Ombres : diffuses et profondes, jamais nettes ---------- */
+  --shadow-card: 0 1px 2px #00000040;
+  --shadow-lifted: 0 12px 32px -8px #000000b3;
+  --shadow-panel: 0 24px 64px -16px #000000cc;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  /* Un halo chaud tres leger en haut : la lueur d'un projecteur.
+     Assez subtil pour ne pas se remarquer, assez present pour que
+     le fond ne soit pas un aplat mort. */
+  background-color: var(--color-base);
+  background-image: radial-gradient(
+    120% 80% at 50% -20%,
+    #2a16171a 0%,
+    transparent 60%
+  );
+  background-attachment: fixed;
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Selection de texte aux couleurs de l'accent */
+::selection {
+  background-color: var(--color-accent);
+  color: var(--color-ink);
+}
+
+/* Barres de defilement discretes — une barre claire par defaut
+   casserait completement l'ambiance sombre. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}

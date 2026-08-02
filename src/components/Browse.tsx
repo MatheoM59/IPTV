@@ -1,14 +1,15 @@
-import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { SideCategory } from "../components/SideCategory";
+import { SideCategory } from "./SideCategory";
 import type { Category, Content } from "../types";
-import { ContentDisplay } from "../components/Content";
-export const Browse = () => {
+import { ContentDisplay } from "./Content";
+import { Loading } from "./Loading";
+export const Browse = ({ catalog }: { catalog: string }) => {
   const [category, setCategory] = useState<string | null>(null);
   const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [content, setContent] = useState<Content[]>([]);
-  const { catalog } = useParams();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const charger = async () => {
@@ -28,14 +29,16 @@ export const Browse = () => {
         }
         console.log("try");
       } catch (e) {
-        console.error(e);
+        setError(true);
       }
     };
     charger();
   }, [catalog]);
 
   useEffect(() => {
+    if (category === null) return;
     const charger = async () => {
+      setLoading(true);
       try {
         const call = await invoke<Content[]>("get_contents", {
           catalog,
@@ -44,7 +47,9 @@ export const Browse = () => {
         setContent(call);
         console.log("Succes content");
       } catch (e) {
-        console.error("Erreur lors du chargement de contents : (", { e }, ")");
+        setError(true);
+      } finally {
+        setLoading(false);
       }
     };
     charger();
@@ -53,6 +58,7 @@ export const Browse = () => {
     <div className="flex flex-1 min-h-0">
       <SideCategory setCategory={setCategory} categoryList={categoryList} />
       <ContentDisplay category={category} content={content} />
+      {loading && <Loading />}
     </div>
   );
 };

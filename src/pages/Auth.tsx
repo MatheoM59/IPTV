@@ -20,35 +20,62 @@ export const Auth = () => {
       console.error(e);
     }
   };
+  const champ =
+    "w-full rounded-lg border border-line bg-base px-4 py-2.5 text-ink " +
+    "placeholder:text-muted outline-none transition " +
+    "focus:border-accent focus:ring-2 focus:ring-accent/30";
+
   return (
-    <>
-      <form>
-        <div className="logins">
-          <input
-            type="text"
-            placeholder="Ton username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Ton password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+    <main className="flex h-full items-center justify-center p-6">
+      <form className="w-full max-w-sm rounded-2xl border border-line bg-surface p-8 shadow-2xl shadow-black/40">
+        <h1 className="text-2xl font-semibold tracking-tight">Ton IPTV</h1>
+        <p className="mt-1 mb-8 text-sm text-muted">
+          Connecte-toi avec les identifiants de ton fournisseur.
+        </p>
+
+        <div className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted">Identifiant</span>
+            <input
+              type="text"
+              placeholder="Ton username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className={champ}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted">Mot de passe</span>
+            <input
+              type="password"
+              placeholder="Ton password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={champ}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted">Serveur</span>
+            <input
+              type="text"
+              placeholder="http://exemple.com"
+              value={host}
+              onChange={(e) => setHost(e.target.value)}
+              className={champ}
+            />
+          </label>
         </div>
-        <div>
-          <input
-            type="text"
-            placeholder="Ton liens de connection"
-            value={host}
-            onChange={(e) => setHost(e.target.value)}
-          />
-        </div>
-        <button type="button" onClick={handleSubmit}>
+
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className="mt-8 w-full rounded-lg bg-accent px-4 py-2.5 font-medium text-ink transition hover:bg-accent-hover active:scale-[0.99]"
+        >
           Se connecter
         </button>
       </form>
-    </>
+    </main>
   );
 };

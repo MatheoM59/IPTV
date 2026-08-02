@@ -8,8 +8,8 @@ mod app;
 mod xtream;
 
 #[tauri::command]
-fn get_account_info(
-    state: tauri::State<AppState>,
+async fn get_account_info(
+    state: tauri::State<'_, AppState>,
     host: String,
     username: String,
     password: String,
@@ -19,7 +19,7 @@ fn get_account_info(
         username,
         password,
     };
-    let account = xtream::api::<ApiResponse>(&creds, None)?;
+    let account = xtream::api::<ApiResponse>(&creds, None).await?;
     if account.user_info.auth != 1 {
         return Err("Erreur de connection".to_string());
     }
@@ -38,19 +38,24 @@ fn get_account_info(
 }
 
 #[tauri::command]
-fn get_categories(state: tauri::State<AppState>, catalog: String) -> Result<Vec<Category>, String> {
-    let guard = state
-        .credentials
-        .lock()
-        .map_err(|e| format!("État vérouillé : {e}"))?;
-    let creds = guard.as_ref().ok_or("Aucune connection active")?;
+async fn get_categories(
+    state: tauri::State<'_, AppState>,
+    catalog: String,
+) -> Result<Vec<Category>, String> {
+    let creds = {
+        let guard = state
+            .credentials
+            .lock()
+            .map_err(|e| format!("État vérouillé : {e}"))?;
+        guard.as_ref().ok_or("Aucune connection active")?.clone()
+    };
     let action = match catalog.as_str() {
         "live" => "get_live_categories",
         "vod" => "get_vod_categories",
         "serie" => "get_series_categories",
         other => return Err(format!("Catalogue inconnue : {other}")),
     };
-    xtream::api::<Vec<Category>>(creds, Some(action))
+    xtream::api::<Vec<Category>>(&creds, Some(action)).await
 }
 
 #[tauri::command]
@@ -63,11 +68,12 @@ fn get_status(state: tauri::State<AppState>) -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn get_contents(
-    state: tauri::State<AppState>,
+async fn get_contents(
+    state: tauri::State<'_, AppState>,
     catalog: String,
     category_id: Option<String>,
 ) -> Result<Vec<Content>, String> {
+    println!("[get_contents] ENTREE catalog={catalog} category_id={category_id:?}");
     {
         let cache = state
             .catalog
@@ -87,21 +93,25 @@ fn get_contents(
         guard.as_ref().ok_or("Aucune connection acitve")?.clone()
     };
     let items: Vec<Content> = match catalog.as_str() {
-        "live" => xtream::api::<Vec<LiveContent>>(&creds, Some("get_live_streams"))?
+        "live" => xtream::api::<Vec<LiveContent>>(&creds, Some("get_live_streams"))
+            .await?
             .into_iter()
             .map(Content::from)
             .collect(),
-        "vod" => xtream::api::<Vec<VodContent>>(&creds, Some("get_vod_streams"))?
+        "vod" => xtream::api::<Vec<VodContent>>(&creds, Some("get_vod_streams"))
+            .await?
             .into_iter()
             .map(Content::from)
             .collect(),
-        "serie" => xtream::api::<Vec<SeriesContent>>(&creds, Some("get_series"))?
+        "serie" => xtream::api::<Vec<SeriesContent>>(&creds, Some("get_series"))
+            .await?
             .into_iter()
             .map(Content::from)
             .collect(),
         other => return Err(format!("Catalogue inconnue : {other}")),
     };
     let result = filter(&items, category_id.as_deref());
+
     {
         let mut cache = state
             .catalog

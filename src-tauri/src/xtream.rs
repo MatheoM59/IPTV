@@ -1,5 +1,6 @@
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 /// Typage et structure
 #[derive(Debug, Deserialize, Serialize)]
@@ -115,21 +116,31 @@ impl From<SeriesContent> for Content {
 }
 
 /// Api call
-pub fn api<T: DeserializeOwned>(creds: &Credentials, action: Option<&str>) -> Result<T, String> {
+pub async fn api<T: DeserializeOwned>(
+    creds: &Credentials,
+    action: Option<&str>,
+) -> Result<T, String> {
     let url = build_api_url(creds, action);
-    let client = reqwest::blocking::Client::builder()
+    let client = reqwest::Client::builder()
         .user_agent("VLC/3.0.20 LibVLC/3.0.20")
+        .timeout(Duration::from_secs(30))
         .build()
         .map_err(|e| format!("User Agent error {e}"))?;
+
     let resp = client
         .get(&url)
         .send()
+        .await
         .map_err(|e| format!("Send error {e}"))?;
     let status = resp.status();
     if !status.is_success() {
         return Err(format!("Requête refusé (status : {status})"));
     }
-    let body = resp.text().map_err(|e| format!("Body text absent {e}"))?;
+    let body = resp
+        .text()
+        .await
+        .map_err(|e| format!("Body text absent {e}"))?;
+
     serde_json::from_str(&body).map_err(|e| format!("Parse error {e}"))
 }
 
