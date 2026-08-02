@@ -3,7 +3,7 @@ export const SideCategory = ({
   setCategory,
   categoryList,
 }: {
-  setCategory: (id: string) => void;
+  setCategory: (id: string | null) => void;
   categoryList: Category[];
 }) => {
   return (

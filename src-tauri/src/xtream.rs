@@ -1,6 +1,5 @@
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
 
 /// Typage et structure
 #[derive(Debug, Deserialize, Serialize)]
@@ -14,15 +13,11 @@ pub struct UserInfo {
     pub status: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Credentials {
     pub host: String,
     pub username: String,
     pub password: String,
-}
-#[derive(Debug, Deserialize, Serialize)]
-pub struct AppState {
-    pub credentials: Mutex<Option<Credentials>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -75,15 +70,53 @@ pub enum StreamKind {
     Movie,
     Series,
 }
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Content {
+    pub id: u32,
+    pub title: String,
+    pub image: Option<String>,
+    pub category_id: Option<String>,
+    pub extention: Option<String>,
+}
+
+impl From<LiveContent> for Content {
+    fn from(c: LiveContent) -> Self {
+        Content {
+            id: c.stream_id,
+            title: c.name,
+            image: Some(c.stream_icon),
+            category_id: c.category_id,
+            extention: None,
+        }
+    }
+}
+impl From<VodContent> for Content {
+    fn from(c: VodContent) -> Self {
+        Content {
+            id: c.stream_id,
+            title: c.name,
+            image: c.stream_icon,
+            category_id: c.category_id,
+            extention: Some(c.container_extension),
+        }
+    }
+}
+
+impl From<SeriesContent> for Content {
+    fn from(c: SeriesContent) -> Self {
+        Content {
+            id: c.series_id,
+            title: c.name,
+            image: Some(c.cover),
+            category_id: c.category_id,
+            extention: None,
+        }
+    }
+}
 
 /// Api call
-pub fn api<T: DeserializeOwned>(
-    host: &str,
-    username: &str,
-    password: &str,
-    action: Option<&str>,
-) -> Result<T, String> {
-    let url = build_api_url(host, username, password, action);
+pub fn api<T: DeserializeOwned>(creds: &Credentials, action: Option<&str>) -> Result<T, String> {
+    let url = build_api_url(creds, action);
     let client = reqwest::blocking::Client::builder()
         .user_agent("VLC/3.0.20 LibVLC/3.0.20")
         .build()
@@ -100,7 +133,13 @@ pub fn api<T: DeserializeOwned>(
     serde_json::from_str(&body).map_err(|e| format!("Parse error {e}"))
 }
 
-fn build_api_url(host: &str, username: &str, password: &str, action: Option<&str>) -> String {
+fn build_api_url(creds: &Credentials, action: Option<&str>) -> String {
+    let Credentials {
+        host,
+        username,
+        password,
+    } = creds;
+
     let mut url = format!("{host}/player_api.php?username={username}&password={password}");
 
     if let Some(a) = action {
