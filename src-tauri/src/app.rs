@@ -1,10 +1,15 @@
-use crate::xtream::{Content, Credentials};
+use crate::xtream::{Content, Credentials, UserInfo};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     sync::Mutex,
     time::{Duration, SystemTime},
 };
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AppState {
+    pub session: Mutex<Option<Session>>,
+    pub catalog: Mutex<HashMap<String, CachedCatalog>>,
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CachedCatalog {
@@ -20,7 +25,15 @@ impl CachedCatalog {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct AppState {
-    pub credentials: Mutex<Option<Credentials>>,
-    pub catalog: Mutex<HashMap<String, CachedCatalog>>,
+pub struct Session {
+    pub credentials: Credentials,
+    pub user_info: UserInfo,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct AccountView {
+    pub host: String,
+    pub username: String,
+    pub status: String,
+    pub exp_date: Option<String>,
 }

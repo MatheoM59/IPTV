@@ -1,4 +1,4 @@
-use crate::app::{AppState, CachedCatalog};
+use crate::app::{AccountView, AppState, CachedCatalog, Session};
 use crate::xtream::{
     ApiResponse, Category, Content, Credentials, LiveContent, SeriesContent, VodContent,
 };
@@ -29,11 +29,16 @@ async fn get_account_info(
             account.user_info.status
         ));
     }
-    let mut guard = state
-        .credentials
-        .lock()
-        .map_err(|e| format!("État vérouillé : {e}"))?;
-    *guard = Some(creds);
+    let session = Session {
+        credentials: creds,
+        user_info: account.user_info.clone(),
+    };
+    let mut guard = state.session.lock().map_err(
+        |e: std::sync::PoisonError<std::sync::MutexGuard<'_, Option<Session>>>| {
+            format!("État vérouillé : {e}")
+        },
+    )?;
+    *guard = Some(session);
     Ok(account)
 }
 
@@ -44,10 +49,14 @@ async fn get_categories(
 ) -> Result<Vec<Category>, String> {
     let creds = {
         let guard = state
-            .credentials
+            .session
             .lock()
             .map_err(|e| format!("État vérouillé : {e}"))?;
-        guard.as_ref().ok_or("Aucune connection active")?.clone()
+        guard
+            .as_ref()
+            .ok_or("Aucune connection active")?
+            .credentials
+            .clone()
     };
     let action = match catalog.as_str() {
         "live" => "get_live_categories",
@@ -61,12 +70,32 @@ async fn get_categories(
 #[tauri::command]
 fn get_status(state: tauri::State<AppState>) -> Result<bool, String> {
     let guard = state
-        .credentials
+        .session
         .lock()
         .map_err(|e| format!("État vérouillé : {e}"))?;
     Ok(guard.is_some())
 }
 
+#[tauri::command]
+fn get_account(state: tauri::State<AppState>) -> Result<AccountView, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|e| format!("Vérouillé : {e}"))?;
+    let unlock = session.as_ref().ok_or("Pas de session")?;
+
+    let host = unlock.credentials.host.clone();
+    let username = unlock.credentials.username.clone();
+    let status = unlock.user_info.status.clone();
+    let exp_date = unlock.user_info.exp_date.clone();
+    let result = AccountView {
+        host,
+        username,
+        status,
+        exp_date,
+    };
+    Ok(result)
+}
 #[tauri::command]
 async fn get_contents(
     state: tauri::State<'_, AppState>,
@@ -87,10 +116,14 @@ async fn get_contents(
     }
     let creds = {
         let guard = state
-            .credentials
+            .session
             .lock()
             .map_err(|e| format!("État vérouillé : {e}"))?;
-        guard.as_ref().ok_or("Aucune connection acitve")?.clone()
+        guard
+            .as_ref()
+            .ok_or("Aucune connection acitve")?
+            .credentials
+            .clone()
     };
     let items: Vec<Content> = match catalog.as_str() {
         "live" => xtream::api::<Vec<LiveContent>>(&creds, Some("get_live_streams"))
@@ -143,7 +176,7 @@ fn filter(items: &[Content], category_id: Option<&str>) -> Vec<Content> {
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState {
-            credentials: Mutex::new(None),
+            session: Mutex::new(None),
             catalog: Mutex::new(HashMap::new()),
         })
         .plugin(tauri_plugin_opener::init())
@@ -151,7 +184,8 @@ pub fn run() {
             get_account_info,
             get_categories,
             get_status,
-            get_contents
+            get_contents,
+            get_account
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

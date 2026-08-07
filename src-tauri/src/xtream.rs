@@ -8,10 +8,11 @@ pub struct ApiResponse {
     pub user_info: UserInfo,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserInfo {
     pub auth: u8,
     pub status: String,
+    pub exp_date: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
