@@ -1,10 +1,12 @@
 use crate::app::{AccountView, AppState, CachedCatalog, Session};
 use crate::xtream::{
-    ApiResponse, Category, Content, Credentials, LiveContent, SeriesContent, VodContent,
+    ApiResponse, Category, Content, Credentials, LiveContent, MovieDetails, MovieResponse,
+    SeriesContent, VodContent,
 };
 use std::time::SystemTime;
 use std::{collections::HashMap, sync::Mutex};
 mod app;
+mod gemini;
 mod xtream;
 
 #[tauri::command]
@@ -19,7 +21,7 @@ async fn get_account_info(
         username,
         password,
     };
-    let account = xtream::api::<ApiResponse>(&creds, None).await?;
+    let account = xtream::api::<ApiResponse>(&creds, None, &[]).await?;
     if account.user_info.auth != 1 {
         return Err("Erreur de connection".to_string());
     }
@@ -64,7 +66,7 @@ async fn get_categories(
         "serie" => "get_series_categories",
         other => return Err(format!("Catalogue inconnue : {other}")),
     };
-    xtream::api::<Vec<Category>>(&creds, Some(action)).await
+    xtream::api::<Vec<Category>>(&creds, Some(action), &[]).await
 }
 
 #[tauri::command]
@@ -96,24 +98,20 @@ fn get_account(state: tauri::State<AppState>) -> Result<AccountView, String> {
     };
     Ok(result)
 }
-#[tauri::command]
-async fn get_contents(
-    state: tauri::State<'_, AppState>,
-    catalog: String,
-    category_id: Option<String>,
-) -> Result<Vec<Content>, String> {
-    println!("[get_contents] ENTREE catalog={catalog} category_id={category_id:?}");
+
+async fn ensure_catalog(state: &AppState, catalog: &str) -> Result<(), String> {
     {
         let cache = state
             .catalog
             .lock()
             .map_err(|e| format!("Cache vérouillé : {e}"))?;
-        if let Some(entry) = cache.get(&catalog)
+        if let Some(entry) = cache.get(catalog)
             && entry.is_fresh()
         {
-            return Ok(filter(&entry.items, category_id.as_deref()));
+            return Ok(());
         }
-    }
+    };
+
     let creds = {
         let guard = state
             .session
@@ -125,43 +123,103 @@ async fn get_contents(
             .credentials
             .clone()
     };
-    let items: Vec<Content> = match catalog.as_str() {
-        "live" => xtream::api::<Vec<LiveContent>>(&creds, Some("get_live_streams"))
+    let items: Vec<Content> = match catalog {
+        "live" => xtream::api::<Vec<LiveContent>>(&creds, Some("get_live_streams"), &[])
             .await?
             .into_iter()
             .map(Content::from)
             .collect(),
-        "vod" => xtream::api::<Vec<VodContent>>(&creds, Some("get_vod_streams"))
+        "vod" => xtream::api::<Vec<VodContent>>(&creds, Some("get_vod_streams"), &[])
             .await?
             .into_iter()
             .map(Content::from)
             .collect(),
-        "serie" => xtream::api::<Vec<SeriesContent>>(&creds, Some("get_series"))
+        "serie" => xtream::api::<Vec<SeriesContent>>(&creds, Some("get_series"), &[])
             .await?
             .into_iter()
             .map(Content::from)
             .collect(),
         other => return Err(format!("Catalogue inconnue : {other}")),
     };
-    let result = filter(&items, category_id.as_deref());
-
     {
         let mut cache = state
             .catalog
             .lock()
             .map_err(|e| format!("État vérouillé : {e}"))?;
         cache.insert(
-            catalog,
+            catalog.to_string(),
             CachedCatalog {
                 items,
                 fetched_at: SystemTime::now(),
             },
         )
     };
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_content(
+    state: tauri::State<'_, AppState>,
+    catalog: String,
+    category_id: Option<String>,
+) -> Result<Vec<Content>, String> {
+    ensure_catalog(&state, &catalog).await?;
+    let cache = state
+        .catalog
+        .lock()
+        .map_err(|e| format!("État vérouillé : {e}"))?;
+    let entry = cache
+        .get(&catalog)
+        .ok_or("Catalog absent du cache lors du chargement")?;
+
+    let result = filter_cate(&entry.items, category_id.as_deref());
     Ok(result)
 }
 
-fn filter(items: &[Content], category_id: Option<&str>) -> Vec<Content> {
+#[tauri::command]
+async fn get_vod_details(
+    state: tauri::State<'_, AppState>,
+    vod_id: String,
+) -> Result<MovieDetails, String> {
+    let creds = {
+        let guard = state
+            .session
+            .lock()
+            .map_err(|e| format!("État vérouillé : {e}"))?;
+        guard
+            .as_ref()
+            .ok_or("Aucune connection active")?
+            .credentials
+            .clone()
+    };
+    let action = "get_vod_info";
+    Ok(
+        xtream::api::<MovieResponse>(&creds, Some(action), &[("vod_id", &vod_id)])
+            .await?
+            .into(),
+    )
+}
+
+#[tauri::command]
+async fn search_content(
+    state: tauri::State<'_, AppState>,
+    catalog: String,
+    query: String,
+) -> Result<Vec<Content>, String> {
+    ensure_catalog(&state, &catalog).await?;
+    let cache = state
+        .catalog
+        .lock()
+        .map_err(|e| format!("État vérouillé : {e}"))?;
+    let entry = cache
+        .get(&catalog)
+        .ok_or("Catalog absent du cache lors du chargement")?;
+
+    let result = filter_title(&entry.items, &query);
+    Ok(result)
+}
+
+fn filter_cate(items: &[Content], category_id: Option<&str>) -> Vec<Content> {
     match category_id {
         None => items.to_vec(),
         Some(id) => items
@@ -170,6 +228,16 @@ fn filter(items: &[Content], category_id: Option<&str>) -> Vec<Content> {
             .cloned()
             .collect(),
     }
+}
+
+fn filter_title(items: &[Content], query: &str) -> Vec<Content> {
+    let query_low = query.to_lowercase();
+    items
+        .iter()
+        .filter(|c| c.title.to_lowercase().contains(&query_low))
+        .take(200)
+        .cloned()
+        .collect()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -184,8 +252,10 @@ pub fn run() {
             get_account_info,
             get_categories,
             get_status,
-            get_contents,
-            get_account
+            get_content,
+            search_content,
+            get_account,
+            get_vod_details
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

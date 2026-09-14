@@ -14,8 +14,7 @@ export const Auth = () => {
         username,
         password,
       });
-      nav("/app", { replace: true });
-      console.log(account);
+      nav("/app", { replace: true, state: { account: account } });
     } catch (e) {
       console.error(e);
     }
@@ -30,7 +29,8 @@ export const Auth = () => {
       <form className="w-full max-w-sm rounded-2xl border border-line bg-surface p-8 shadow-2xl shadow-black/40">
         <h1 className="text-2xl font-semibold tracking-tight">Ton IPTV</h1>
         <p className="mt-1 mb-8 text-sm text-muted">
-          Connecte-toi avec les identifiants de ton fournisseur.
+          Connecte-toi avec les identifiants de ton fournisseur ainsi que le
+          lien qui t'est fournit.
         </p>
 
         <div className="flex flex-col gap-4">

@@ -1,7 +1,7 @@
 import type { Content } from "../types";
 export const ContentCard = ({ item }: { item: Content }) => {
   return (
-    <div className="  bg-surface border border-line rounded-card">
+    <div className="  bg-surface border border-line rounded-card group hover:bg-elevated hover:border-line-strong">
       <div>
         {item.image && (
           <img
@@ -11,7 +11,7 @@ export const ContentCard = ({ item }: { item: Content }) => {
           ></img>
         )}
       </div>
-      <p className="border-t border-line text-muted text-center line-clamp-2 ">
+      <p className="border-t border-line text-muted text-center line-clamp-2 group-hover:text-ink">
         {item.title}
       </p>
     </div>
