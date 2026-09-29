@@ -307,9 +307,9 @@ fn build_api_url(creds: &Credentials, action: Option<&str>, params: &[(&str, &st
 
 pub fn build_stream_url(
     host: &str,
+    kind: StreamKind,
     username: &str,
     password: &str,
-    kind: StreamKind,
     stream_id: u32,
     extension: &str,
 ) -> String {

@@ -9,7 +9,8 @@ import { useEffect, useState } from "react";
 export const VodDetails = ({ open }: { open: Content }) => {
   const vodId = open.id.toString();
   const [info, setInfo] = useState<MovieDetails>();
-
+  const catalog = "vod";
+  console.log(open.id);
   useEffect(() => {
     const charger = async () => {
       try {
@@ -39,13 +40,16 @@ export const VodDetails = ({ open }: { open: Content }) => {
           {info && <MetaData info={info} />}
 
           <div className="flex gap-3">
-            <BtnPlay />
+            <BtnPlay
+              id={open.id}
+              catalog={catalog}
+              titre={info?.name ?? open.title}
+              extension={info?.container_extension}
+            />
             {info?.youtube_trailer && <BtnTrailer url={info.youtube_trailer} />}
           </div>
 
-          {info?.plot && (
-            <p className="text-body text-muted">{info.plot}</p>
-          )}
+          {info?.plot && <p className="text-body text-muted">{info.plot}</p>}
 
           {info && (
             <dl className="flex flex-wrap gap-x-10 gap-y-4 border-t border-line pt-5">

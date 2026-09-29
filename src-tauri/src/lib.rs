@@ -1,7 +1,7 @@
 use crate::app::{AccountView, AppState, CachedCatalog, Session};
 use crate::xtream::{
     ApiResponse, Category, Content, Credentials, LiveContent, MovieDetails, MovieResponse,
-    SeriesContent, VodContent,
+    SeriesContent, StreamKind, VodContent,
 };
 use std::time::SystemTime;
 use std::{collections::HashMap, sync::Mutex};
@@ -255,8 +255,63 @@ pub fn run() {
             get_content,
             search_content,
             get_account,
-            get_vod_details
+            get_vod_details,
+            lire
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+/* #[tauri::command]
+pub fn geminiCall() {
+    let result = gemini::chercher(&requete, nb).await?;
+    ensure_catalog(state, "vod");
+    ensure_catalog(state, "serie");
+    filter_title(items, query)
+}
+ */
+
+#[tauri::command]
+async fn lire(
+    state: tauri::State<'_, AppState>,
+    catalog: String,
+    id: u32,
+    extension: Option<String>,
+    titre: String,
+) -> Result<(), String> {
+    let creds = {
+        let guard = state
+            .session
+            .lock()
+            .map_err(|e| format!("État vérouillé : {e}"))?;
+        guard
+            .as_ref()
+            .ok_or("Aucune connection active")?
+            .credentials
+            .clone()
+    };
+    let (kind, ext) = match catalog.as_str() {
+        "live" => (StreamKind::Live, "ts".to_string()),
+        "vod" => (StreamKind::Movie, extension.ok_or("Extension manquante")?),
+        "serie" => (StreamKind::Series, extension.ok_or("Extension manquante")?),
+        other => return Err(format!("Catalogue inconnue : {other}")),
+    };
+    let url = xtream::build_stream_url(
+        &creds.host,
+        kind,
+        &creds.username,
+        &creds.password,
+        id,
+        &ext,
+    );
+    println!("URL : {}", url.replace(&creds.password, "***"));
+
+    let mut cmd = std::process::Command::new("open");
+    cmd.arg("-a").arg("IINA").arg(&url).arg("--mpv-fullscreen");
+
+    if catalog == "live" {
+        cmd.arg("--mpv-no-resume-playback");
+    }
+    cmd.spawn()
+        .map_err(|e| format!("Lecteur IINA introuvable : {e}"))?;
+    Ok(())
 }
